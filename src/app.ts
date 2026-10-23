@@ -39,13 +39,17 @@ export const web = setupWeb(new Hono<Env>(), {
       : { title, scripts: [`/${entry.file}`], styles: (entry.css ?? []).map((file) => `/${file}`), head }
   ),
   database: (c) => createDb(c.env.DB),
-  schema,
+  // A plain object, not the module namespace: under Vite's dev server a
+  // namespace's exports are getters, and the bindings look tables up by value.
+  schema: { ...schema },
   // Each record a path names, and who may load it: another member's record
   // is the 404 a missing one is, so no action has to check.
   bindings: {
-    project: routeBinding(schema.projects, { ownedBy: 'userId' }),
-    publicProject: routeBinding(schema.projects, { publicWhen: { visibility: 'public' } }),
-    session: routeBinding(schema.session, { ownedBy: 'userId' }),
+    // The editor's: the writer's own posts, drafts too.
+    post: routeBinding(schema.posts, { ownedBy: 'userId' }),
+    // The readers': any blog by its slug, and its published posts under it.
+    blog: routeBinding(schema.blogs, { public: true }),
+    publicPost: routeBinding(schema.posts, { publicWhen: { status: 'published' } }),
   },
   pages,
   paths,
@@ -66,7 +70,7 @@ export const web = setupWeb(new Hono<Env>(), {
     signInLimits: { limiter: 'SIGN_IN_LIMITER', table: schema.rateLimit },
     signInPath: paths.login,
     homePath: paths.dashboard,
-    share: tableSchema(schema.user).mapFields(Struct.pick(['id', 'name', 'email'])),
+    share: tableSchema(schema.user).mapFields(Struct.pick(['id', 'name', 'isAnonymous'])),
   },
   flash: S.Struct({ success: S.String }),
   errors: { component: 'Errors/Error' },

@@ -1,7 +1,7 @@
 import { cn } from '~/components/cn'
 
 const base =
-  'inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:focus-visible:outline-orange-400 [&_svg]:size-4 [&_svg]:shrink-0'
+  'inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:focus-visible:outline-rose-400 [&_svg]:size-4 [&_svg]:shrink-0'
 
 const variants = {
   primary:

@@ -2,7 +2,7 @@
   "name": "popcomputer-web-blog",
   "version": "1.0.0",
   "private": true,
-  "description": "A starting point for @popcomputer/web on Cloudflare Workers: React pages, D1 and Better Auth.",
+  "description": "A blog with a CMS on @popcomputer/web: Markdown posts, drafts, and public pages cached at the edge.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -38,11 +38,14 @@
     "lucide-react": "^1.59.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.64.0",
     "@cloudflare/workers-types": "^5.20261016.1",
+    "@tailwindcss/typography": "0.5.16",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "^1.4.3",
     "@types/react": "^19.3.0",

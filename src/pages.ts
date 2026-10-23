@@ -4,36 +4,36 @@ import { Schema as S, Struct } from 'effect'
 import { tableSchema } from '@popcomputer/web/schema'
 import * as schema from './schema'
 
-export const ProjectSummary = tableSchema(schema.projects).mapFields(
-  Struct.pick(['id', 'name', 'description', 'visibility', 'updatedAt'])
+export const Blog = tableSchema(schema.blogs).mapFields(Struct.pick(['id', 'slug', 'title', 'description']))
+
+export const PublicBlog = tableSchema(schema.blogs).mapFields(Struct.pick(['slug', 'title', 'description']))
+
+export const PostSummary = tableSchema(schema.posts).mapFields((fields) => ({
+  ...Struct.pick(fields, ['id', 'slug', 'title', 'status', 'publishedAt', 'updatedAt']),
+  words: S.Number,
+}))
+
+export const Post = tableSchema(schema.posts).mapFields(
+  Struct.pick(['id', 'slug', 'title', 'excerpt', 'body', 'status', 'publishedAt', 'updatedAt'])
 )
 
-export const Project = tableSchema(schema.projects).mapFields(
-  Struct.pick(['id', 'name', 'description', 'visibility', 'createdAt', 'updatedAt'])
-)
+/** A published post in its blog's list: its excerpt, or its first paragraph. */
+export const PublishedSummary = tableSchema(schema.posts).mapFields((fields) => ({
+  ...Struct.pick(fields, ['slug', 'title', 'publishedAt']),
+  excerpt: S.String,
+  readingMinutes: S.Number,
+}))
 
-export const PublicProject = tableSchema(schema.projects).mapFields(Struct.pick(['id', 'name', 'description', 'updatedAt']))
-
-// A signed-in device: never its token, which only Better Auth reads.
-export const Session = tableSchema(schema.session).mapFields((fields) => ({
-  ...Struct.pick(fields, ['id', 'ipAddress', 'userAgent', 'createdAt', 'updatedAt', 'expiresAt']),
-  current: S.Boolean,
+export const PublishedPost = tableSchema(schema.posts).mapFields((fields) => ({
+  ...Struct.pick(fields, ['slug', 'title', 'excerpt', 'body', 'publishedAt', 'updatedAt']),
+  readingMinutes: S.Number,
 }))
 
 export const pages = {
   'Auth/Login': S.Struct({}),
-  'Auth/Register': S.Struct({}),
-  Dashboard: S.Struct({
-    recentProjects: S.Array(ProjectSummary),
-    projectCount: S.Number,
-    publicProjectCount: S.Number,
-    sessionCount: S.Number,
-    thisDevice: tableSchema(schema.session).mapFields(Struct.pick(['userAgent', 'createdAt'])),
-  }),
-  'Projects/Index': S.Struct({ projects: S.Array(ProjectSummary) }),
-  'Projects/Create': S.Struct({}),
-  'Projects/Show': S.Struct({ project: Project }),
-  'Projects/Edit': S.Struct({ project: Project }),
-  'Projects/Public': S.Struct({ project: PublicProject }),
-  'Sessions/Index': S.Struct({ sessions: S.Array(Session) }),
+  'Posts/Index': S.Struct({ blog: Blog, posts: S.Array(PostSummary) }),
+  'Posts/Editor': S.Struct({ blog: Blog, post: S.NullOr(Post) }),
+  Settings: S.Struct({ blog: Blog }),
+  'Blog/Index': S.Struct({ blog: PublicBlog, posts: S.Array(PublishedSummary) }),
+  'Blog/Post': S.Struct({ blog: PublicBlog, post: PublishedPost }),
 }

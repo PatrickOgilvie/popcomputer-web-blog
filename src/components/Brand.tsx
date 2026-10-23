@@ -9,7 +9,7 @@ export default function Brand({ className }: { readonly className?: string }) {
     <Link
       href="/"
       className={cn(
-        'flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600',
+        'flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rose-600',
         className
       )}
       aria-label="popcomputer/web demo, dashboard"

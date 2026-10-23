@@ -1,37 +1,33 @@
 <img src="src/assets/popcomputer.png" alt="Popcomputer" width="374" height="69">
 
-# @popcomputer/web demo
+# A blog with a CMS on @popcomputer/web
 
-A complete application on @popcomputer/web, to start yours from.
+An example application made from the
+[template](https://github.com/PatrickOgilvie/popcomputer-web-demo): Folio, a
+small blogging CMS. Each writer has a blog; they write posts in Markdown
+with a preview, keep them as drafts, and publish them to a public blog with
+an RSS feed, whose pages Cloudflare caches at the edge and purges as they're
+saved.
+
+**Live at [blog.web.popcomputer.com](https://blog.web.popcomputer.com).** Choose Start writing: you’re signed in as a guest with a blog of your own, three posts published and a draft, and no email or password.
 
 React pages served by Inertia from a Cloudflare Worker, with Effect actions,
 D1 and Better Auth, built on
 [@popcomputer/web](https://github.com/PatrickOgilvie/popcomputer-web). Its
 [README](https://github.com/PatrickOgilvie/popcomputer-web#readme) explains
-each part; this repository shows them working together. Use it as a
-template, or deploy it as it is.
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/PatrickOgilvie/popcomputer-web-demo)
+each part; this repository shows them working together on a CMS.
 
 ```ts
-// src/actions/projects.ts
-export const updateProject = action(
-  Effect.gen(function* () {
-    // Only its owner's: the binding is ownedBy 'userId', so another member's is a 404.
-    const project = yield* bound('project')
-    const input = yield* validateRequest(ProjectForm)
-    const updatedAt = DateTime.toDateUtc(yield* DateTime.now)
+// src/routes.ts: the editor writes, readers read from Cloudflare's cache
+routes
+  .provide(RequireAuthLayer)
+  .put(paths.post, updatePost, { form: paths.editPost, purges: true })
 
-    yield* dbMutation((db) =>
-      db.update(projects)
-        .set({ ...input, updatedAt })
-        .where(and(eq(projects.id, project.id), eq(projects.userId, project.userId)))
-    )
-    yield* flash('success', 'Project saved.')
+const cache = { maxAge: 300, staleWhileRevalidate: 86_400 } as const
 
-    return yield* redirect(paths.project, { project: project.id })
-  })
-)
+routes
+  .get(paths.blog, showBlog, { cache })
+  .get(paths.publicPost, showPublicPost, { cache })
 ```
 
 ## Contents
@@ -42,19 +38,32 @@ export const updateProject = action(
 
 ## What it does
 
-- **Accounts.** Register, sign in and sign out through Better Auth. Attempts
-  are limited per address by Cloudflare's Rate Limiting binding and per
-  account in D1, and a daily cron clears the counts.
-- **Projects.** Create, edit and delete projects only their owner can see.
-  Another member's project is the same 404 as a missing one.
-- **A public page.** Anyone can read a project its owner made public, at
-  `/showcase/projects/{id}`, until the next request after it is made private.
-- **Signed-in devices.** List the devices signed in to the account, and sign
-  any other one, or all of them, out.
+- **An editor.** Every post of your blog, drafts too, with how many words
+  each has. Write a post's title, address, excerpt and body in Markdown,
+  with a preview as readers will see it. Save it as a draft, publish it,
+  update it, or take it down again; ⌘S saves. A new post's address follows
+  its title until you change it.
+- **A public blog.** Each blog's published posts at `/b/{blog}`, newest
+  first, each at `/b/{blog}/{post}`, in a reading serif, with an RSS feed at
+  `/b/{blog}/feed.xml`. A draft's address is the 404 a missing post's is.
+- **Settings.** The blog's name, its description and its address.
+- **Cached at the edge.** Cloudflare's Workers Cache keeps each public page
+  five minutes, and serves a stale one for a day while it fetches the next.
+  Saving a post purges its page and its blog's list by their Cache-Tags;
+  renaming the blog purges every page of it.
+- **Safe Markdown.** Posts render with react-markdown and GitHub's tables
+  and task lists. Raw HTML stays text and links with a script for an address
+  are dropped, so a post can't run a script; readers' links carry
+  `rel="nofollow ugc"`, and the public pages ask search engines not to list
+  them.
+- **Guests, not accounts.** Start writing signs a visitor in as a guest of
+  their own, through Better Auth's anonymous plugin, with a name such as
+  Jolly Robin. Each guest gets the sample blog in `src/demo.ts`, written in
+  one batch as they sign in, and the daily Cron Trigger deletes guests, with
+  their blogs, after a week.
 
-Each page past sign-in, and the public project page, ends with an "Under the
-hood" panel naming the action that answers it and what the framework
-guarantees there.
+Each page ends with an "Under the hood" panel naming the action that answers
+it and what the framework guarantees there.
 
 ## How it's built
 
@@ -64,37 +73,48 @@ guarantees there.
   | File | Declares |
   | --- | --- |
   | `src/paths.ts` | Every URL. Actions redirect to them and React links to them with `href`. |
-  | `src/schema.ts` | The D1 tables, with their limits as `CHECK` constraints. |
+  | `src/schema.ts` | The `blogs` and `posts` tables, with their limits as `CHECK` constraints. |
   | `src/forms.ts` | The schemas forms are validated with, which type the forms in React too. |
   | `src/pages.ts` | Each page's props, taken from the tables' columns. A column a page doesn't name never reaches the browser. |
-  | `src/env.ts` | The Worker's vars and secrets, with their schemas. The Worker, `bun run dev`, `bun run env:check` and `bun run deploy` check them. |
+  | `src/env.ts` | The Worker's vars and secrets, with their schemas. |
   | `src/app.ts` | `setupWeb`: rendering, D1, Better Auth, route model binding, flash messages and the error page. |
-  | `src/routes.ts` | Every route and the action that answers it. |
+  | `src/routes.ts` | Every route, the action that answers it, and what it caches or purges. |
 
-- **An action reads its record from the URL** rather than querying for it,
-  and its binding says who may load it, so no action checks: another
-  member's project is the 404 a missing one is, from the lookup's own query.
+- **Each binding says who may load its record**, so no action checks:
 
   ```ts
   // src/app.ts
   bindings: {
-    project: routeBinding(schema.projects, { ownedBy: 'userId' }),
-    publicProject: routeBinding(schema.projects, { publicWhen: { visibility: 'public' } }),
-    session: routeBinding(schema.session, { ownedBy: 'userId' }),
+    // The editor's: the writer's own posts, drafts too.
+    post: routeBinding(schema.posts, { ownedBy: 'userId' }),
+    // The readers': any blog by its slug, and its published posts under it.
+    blog: routeBinding(schema.blogs, { public: true }),
+    publicPost: routeBinding(schema.posts, { publicWhen: { status: 'published' } }),
   },
   ```
 
-- **A failed form goes back to its page** with its errors beside the fields,
-  and the page keeps everything it showed.
+  `/b/{blog:slug}/{publicPost:slug}` loads a post only under its blog, by
+  the post's foreign key, and only once it's published.
+
+- **A post's writer is its blog's writer**, by a trigger in
+  `migrations/0001_post_owner.sql`, whatever writes the row.
+
+- **Two posts of a blog can't share an address**, by a unique index, and
+  `uniqueFieldErrors` shows the clash beside the field.
+
+- **The blog's list tags itself** with `posts:blog-{id}`, which each write to
+  a post purges, as well as the post's own `posts:{id}` that `purges: true`
+  purges.
 
 The rest of the tree:
 
 ```text
 src/
-  actions/      the actions, one module per feature
+  actions/      the actions: posts, settings, the public blog and signing in
   pages/        the React pages, each listed in src/main.tsx
-  components/   shared React components
+  components/   shared React components, the Markdown renderer among them
   auth.ts       Better Auth's options
+  demo.ts       the sample blog each guest gets
   worker.ts     the Worker: its fetch and scheduled handlers
 migrations/     D1 migrations, generated by drizzle-kit
 test/           tests through the app, each on a D1 database of its own
@@ -175,38 +195,20 @@ the id.
 If the address shows portless's "404 - Not Found" page, the app isn't running:
 start it with `bun run dev`, whatever command that page suggests.
 
-To try a form from a terminal, post its fields with curl, which the app
-answers as a command-line client: a form that fails validation gets a 422
-with the errors as JSON, and a sign-up or sign-in a 303 to `/` with its
-session cookie, which curl keeps in `cookies.txt` (git ignores it). Send the
-`Origin` a browser would: Better Auth refuses a sign-up or sign-in without
-one, here as in production. Put your app's name in place of `my-app`. The
-example signs up `sam@example.com`, since `bun run db:seed` creates
-`ada@example.com`.
+To start the demo from a terminal, post to `/login` with curl, which the
+app answers as a command-line client: a 303 with the guest's session cookie,
+which curl keeps in `cookies.txt` (git ignores it). Send the `Origin` a
+browser would: Better Auth refuses a sign-in without one, here as in
+production. Put your app's name in place of `my-app`.
 
 ```bash
-curl -isS https://my-app.localhost/register -c cookies.txt \
-  -H 'Origin: https://my-app.localhost' \
-  --data-urlencode 'name=Sam' --data-urlencode 'email=sam@example.com' \
-  --data-urlencode 'password=at least twelve characters'
+curl -isS -X POST https://my-app.localhost/login -c cookies.txt \
+  -H 'Origin: https://my-app.localhost'
 curl -sS -b cookies.txt https://my-app.localhost/
 ```
 
-Signed in, the second command prints the dashboard's HTML page, with your name
-in the page data it carries; signed out, it prints the JSON 401. A browser that
-isn't signed in is sent from `/` to the sign-in page, which a browser's headers
-show: `curl -isS -A Mozilla/5.0 -H 'Accept: text/html' https://my-app.localhost/`
-answers 302 with `location: /login?redirect=%2F`.
-
-Signing in posts the email and password to `/login` the same way; a wrong
-password gets a 422.
-
-```bash
-curl -isS https://my-app.localhost/login -c cookies.txt \
-  -H 'Origin: https://my-app.localhost' \
-  --data-urlencode 'email=sam@example.com' \
-  --data-urlencode 'password=at least twelve characters'
-```
+Signed in, the second command prints the editor's HTML page, with the guest's
+blog and posts in the page data it carries; signed out, it prints the JSON 401.
 
 Without the portless service, `bun run dev` asks for your password the first
 time it runs, and again after a restart. `PORTLESS=0 bun run dev` skips
@@ -261,22 +263,11 @@ bun run db:seed
 ```
 
 It deletes everything in the local database, applies the migrations to a
-new one, then runs `src/seed.ts`. The template's seed creates a member to
-sign in as, `ada@example.com` with the password `at least twelve characters`,
-with a private project and a public one. A seed exports a function that
-takes the database and the Worker's bindings, and inserts with Drizzle, so
-`bun run check` reports a seed a schema change has broken:
-
-```ts
-// src/seed.ts
-export async function seed(db: Database, env: Bindings): Promise<void> {
-  // Through Better Auth, as the sign-up form does, so the password signs in.
-  const auth = createAuth({ db, secret: env.BETTER_AUTH_SECRET, baseURL: 'http://localhost' })
-  const { user } = await auth.api.signUpEmail({ body: { ...seedMember } })
-
-  await db.insert(projects).values([{ userId: user.id, name: 'Apollo' }])
-}
-```
+new one, then runs `src/seed.ts`, which here adds nothing: each guest who
+starts the demo gets the sample blog in `src/demo.ts` as their own, locally as
+on Cloudflare. A seed exports a function that takes the database and the
+Worker's bindings, and inserts with Drizzle, so `bun run check` reports a
+seed a schema change has broken.
 
 `bun run db:seed --file seeds/demo.sql` runs a SQL file instead, or another
 module that exports a seed. To empty the local database without seeding it:
@@ -293,7 +284,7 @@ the local database is ever reset; the one on Cloudflare keeps its data.
 To run one SQL statement on the local database, and see what it returns:
 
 ```bash
-bun run db:execute "SELECT email, created_at FROM user"
+bun run db:execute "SELECT slug, title, status FROM posts"
 ```
 
 With `--remote`, it runs on the database on Cloudflare, the live app's.
@@ -360,12 +351,6 @@ each one is set, not what it holds. Neither shows a value.
 
 ## Deploying
 
-**With the button** above, Cloudflare copies the repository to your account,
-creates the D1 database and asks for `BETTER_AUTH_SECRET`, and any other
-secret in `.dev.vars.example`: give it a new value from
-`openssl rand -base64 32`, not the placeholder. Its deploy applies the
-migrations, then deploys the Worker.
-
 **From your computer**, the first time, sign in to Cloudflare. This opens your
 browser to allow Wrangler into your account; a free account is enough:
 
@@ -427,8 +412,8 @@ It builds the app, uploads it as a version that takes none of the live
 app's requests, checks it answers, and prints its address, such as
 `https://1a2b3c4d-my-app.my-subdomain.workers.dev`. `bun run deploy` makes
 the same code live. A preview runs on the live app's database and secrets:
-what someone does there, signing up or editing a project, they do to the
-live app's data. It never applies migrations, so it says when the database
+what someone does there, starting the demo or publishing a post, they do to
+the live app's data. It never applies migrations, so it says when the database
 on Cloudflare hasn't had one yet: pages that need it fail on the preview
 until a deploy applies it. The app has to be deployed once first, and it
 stops, as a deploy does, while the Worker lacks a secret `src/env.ts` says it
@@ -466,6 +451,11 @@ deploy's check, don't show in `bun run logs`.
 Better Auth takes its origin from each request, so the Worker works on
 `workers.dev`, at its Version URLs and on any custom domain routed to it,
 with nothing more to configure.
+
+This repository's `wrangler.jsonc` routes the Worker to `blog.web.popcomputer.com`, on
+popcomputer.com's Cloudflare zone, and turns on Workers Cache
+(`"cache": { "enabled": true }`), which keeps the public pages. To deploy a
+copy of your own, remove its `routes`, or name a domain on your own account.
 
 ## Deploying from GitHub
 

@@ -40,7 +40,7 @@ export default function PageHeader({
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="truncate rounded-sm hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-orange-600 dark:hover:text-white"
+                      className="truncate rounded-sm hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-rose-600 dark:hover:text-white"
                     >
                       {crumb.label}
                     </Link>

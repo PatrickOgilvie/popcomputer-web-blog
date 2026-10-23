@@ -4,28 +4,22 @@ import type { PageName } from '@popcomputer/web/effect'
 import type { WebPage } from '@popcomputer/web/react'
 import { createRoot } from 'react-dom/client'
 import Login from './pages/Auth/Login'
-import Register from './pages/Auth/Register'
-import Dashboard from './pages/Dashboard'
+import BlogIndex from './pages/Blog/Index'
+import BlogPost from './pages/Blog/Post'
 import ErrorPage from './pages/Errors/Error'
-import CreateProject from './pages/Projects/Create'
-import EditProject from './pages/Projects/Edit'
-import ProjectsIndex from './pages/Projects/Index'
-import PublicProject from './pages/Projects/Public'
-import ShowProject from './pages/Projects/Show'
-import SessionsIndex from './pages/Sessions/Index'
+import Editor from './pages/Posts/Editor'
+import PostsIndex from './pages/Posts/Index'
+import Settings from './pages/Settings'
 import { appTitle } from './title'
 
 // Every registered page's component: a page without one is a type error.
 const components: { readonly [Name in PageName]: WebPage<Name> } = {
   'Auth/Login': Login,
-  'Auth/Register': Register,
-  Dashboard,
-  'Projects/Index': ProjectsIndex,
-  'Projects/Create': CreateProject,
-  'Projects/Show': ShowProject,
-  'Projects/Edit': EditProject,
-  'Projects/Public': PublicProject,
-  'Sessions/Index': SessionsIndex,
+  'Posts/Index': PostsIndex,
+  'Posts/Editor': Editor,
+  Settings,
+  'Blog/Index': BlogIndex,
+  'Blog/Post': BlogPost,
 }
 
 const isPage = (name: string): name is PageName => name in components

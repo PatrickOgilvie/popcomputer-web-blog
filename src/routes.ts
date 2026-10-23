@@ -1,42 +1,38 @@
 import { action, render, RequireAuthLayer, RequireGuestLayer } from '@popcomputer/web/effect'
 import { betterAuthLogoutAction } from '@popcomputer/web/auth'
-import { signIn, signUp } from './actions/auth'
-import { showDashboard } from './actions/dashboard'
-import {
-  createProject,
-  deleteProject,
-  editProject,
-  listProjects,
-  showProject,
-  showPublicProject,
-  updateProject,
-} from './actions/projects'
-import { listSessions, revokeOtherSessions, revokeSession } from './actions/sessions'
+import { startDemo } from './actions/auth'
+import { createPost, deletePost, editPost, listPosts, newPost, updatePost } from './actions/posts'
+import { showBlog, showFeed, showPublicPost } from './actions/public'
+import { showSettings, updateSettings } from './actions/settings'
 import { routes } from './app'
 import { paths } from './paths'
 
+// Nobody registers: the sign-in page starts the demo, as a guest with a blog.
 routes
   .provide(RequireGuestLayer)
   .get(paths.login, action(render('Auth/Login')))
-  .post(paths.login, signIn)
-  .get(paths.register, action(render('Auth/Register')))
-  .post(paths.register, signUp)
+  .post(paths.login, startDemo)
 
 routes.post(paths.logout, betterAuthLogoutAction({ redirectTo: paths.login }))
 
-// Anyone may see a project its owner made public.
-routes.get(paths.publicProject, showPublicProject)
-
+// The editor: the writer's own posts, drafts too.
 routes
   .provide(RequireAuthLayer)
-  .get(paths.dashboard, showDashboard)
-  .get(paths.projects, listProjects)
-  .get(paths.newProject, action(render('Projects/Create')))
-  .post(paths.projects, createProject, { form: paths.newProject })
-  .get(paths.project, showProject)
-  .get(paths.editProject, editProject)
-  .put(paths.project, updateProject, { form: paths.editProject })
-  .delete(paths.project, deleteProject)
-  .get(paths.sessions, listSessions)
-  .delete(paths.otherSessions, revokeOtherSessions)
-  .delete(paths.session, revokeSession, { form: paths.sessions })
+  .get(paths.dashboard, listPosts)
+  .get(paths.newPost, newPost)
+  .post(paths.posts, createPost, { form: paths.newPost })
+  .get(paths.editPost, editPost)
+  .put(paths.post, updatePost, { form: paths.editPost, purges: true })
+  .delete(paths.post, deletePost, { purges: true })
+  .get(paths.settings, showSettings)
+  .put(paths.settings, updateSettings)
+
+// The blog, to anyone. Cloudflare's edge keeps each page five minutes, and
+// serves a stale one for a day while it fetches the next; the writes above
+// purge exactly the pages they change.
+const cache = { maxAge: 300, staleWhileRevalidate: 86_400 } as const
+
+routes
+  .get(paths.feed, showFeed)
+  .get(paths.blog, showBlog, { cache })
+  .get(paths.publicPost, showPublicPost, { cache })

@@ -13,7 +13,7 @@ Each is declared once, and everything else derives from it:
 - `src/paths.ts`: every URL. Build links with `href(paths.x, params)`.
 - `src/schema.ts`: the D1 tables (`src/auth-schema.ts` holds Better Auth's).
 - `src/forms.ts`: the schemas forms are validated with, which type the forms
-  in React too (`FormInput<typeof ProjectForm>`).
+  in React too (`FormInput<typeof PostForm>`).
 - `src/pages.ts`: each page's props, taken from the tables' columns.
 - `src/env.ts`: the Worker's vars and secrets, each with its schema; the
   bindings type derives from it.
@@ -33,18 +33,24 @@ Each is declared once, and everything else derives from it:
    to `components` in `src/main.tsx`; a page without one is a type error.
 6. Test it in `test/` through the app, as the tests there do.
 
-The projects pages are an example to copy and learn from: a list, a form
-that creates, a page that shows, edits and deletes one, and a public page.
-Build what the user asks for beside them the same way, and remove them when
-the user no longer wants them.
+The posts pages are the example to copy: the editor's list, one editor page
+that creates and changes a post (`Posts/Editor`), and the public blog. A
+writer's own records load through `ownedBy` bindings; the public pages bind
+the same tables again (`blog`, `publicPost`) and set the route's `cache`
+option, and each write that changes what they show purges it, with
+`purges: true` and `purgeCache` (`blogPostsTag` in `src/actions/shared.ts`).
+A new public page that shows posts tags itself the same way, with `tagCache`.
+`setupWeb` gets the schema as a plain object (`{ ...schema }`): the module
+namespace's exports are getters under Vite's dev server, and a nested binding
+looks its parent's table up by value.
 
-A route that reads a record names it in its path (`/projects/{project}`)
-and reads it with `bound('project')`. Add its table to `bindings` in
+A route that reads a record names it in its path (`/posts/{post}`)
+and reads it with `bound('post')`. Add its table to `bindings` in
 `src/app.ts` with who may load it, and never check that in the action:
-`routeBinding(schema.projects, { ownedBy: 'userId' })` for the signed-in
+`routeBinding(schema.posts, { ownedBy: 'userId' })` for the signed-in
 member's own records, whose others are the 404 a missing record is;
 `{ publicWhen: { visibility: 'public' } }` for a page anyone may see, under
-a binding of its own (`publicProject` shows the table bound twice);
+a binding of its own (`publicPost` shows the table bound twice);
 `{ public: true }` for any record, to anyone. A record that lives inside
 another, such as a task in a project, goes under it in the path
 (`/projects/{project}/tasks/{task}`) and says
@@ -62,8 +68,8 @@ a migration that has been applied. Tests migrate each test's own D1 database
 from `migrations/`.
 
 `bun run db:seed` deletes the local database's data, migrates a new one and
-runs `src/seed.ts`, whose member signs in as `ada@example.com` with the
-password `at least twelve characters`; keep the seed working when the schema
+runs `src/seed.ts`, which adds nothing here (each guest gets the sample
+blog in `src/demo.ts` when they start the demo); keep the seed working when the schema
 changes, as `bun run check` type-checks it. `bun run db:reset` empties the
 local database. Both delete data, so without a terminal they stop and ask
 for `--yes`: pass it only when the user asked for the reset, and run

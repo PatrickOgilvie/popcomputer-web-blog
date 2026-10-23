@@ -1,4 +1,6 @@
 import { Link, usePage } from '@inertiajs/react'
+import { href } from '@popcomputer/web/paths'
+import { ExternalLink } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import AccountMenu from '~/components/AccountMenu'
@@ -8,30 +10,25 @@ import usePageTransitionFocus from '~/components/usePageTransitionFocus'
 import { paths } from '~/paths'
 
 interface LayoutProps {
+  /** The writer's blog, whose public address the header links to. */
+  readonly blogSlug?: string
   readonly children: ReactNode
 }
 
 const primaryNavigation = [
-  { label: 'Dashboard', href: paths.dashboard },
-  { label: 'Projects', href: paths.projects },
-  { label: 'Sessions', href: paths.sessions },
+  { label: 'Posts', href: paths.dashboard },
+  { label: 'Settings', href: paths.settings },
 ] as const
 
-function isActivePath(currentPath: string, href: string): boolean {
-  if (href === '/') return currentPath === href
-  return currentPath === href || currentPath.startsWith(`${href}/`)
+function isActivePath(currentPath: string, target: string): boolean {
+  if (target === '/') return currentPath === '/' || currentPath.startsWith('/posts')
+  return currentPath === target || currentPath.startsWith(`${target}/`)
 }
 
 const navLinkClassName =
-  'flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 aria-[current=page]:bg-zinc-100 aria-[current=page]:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white dark:aria-[current=page]:bg-zinc-800 dark:aria-[current=page]:text-white'
+  'flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600 aria-[current=page]:bg-zinc-100 aria-[current=page]:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white dark:aria-[current=page]:bg-zinc-800 dark:aria-[current=page]:text-white'
 
-function PrimaryNavigation({
-  currentPath,
-  className,
-}: {
-  readonly currentPath: string
-  readonly className?: string
-}) {
+function PrimaryNavigation({ currentPath, className }: { readonly currentPath: string; readonly className?: string }) {
   return (
     <nav aria-label="Primary" className={className}>
       <ul className="flex gap-1">
@@ -51,14 +48,12 @@ function PrimaryNavigation({
   )
 }
 
-/** Application frame: account-aware header, page focus management, content. */
-export default function Layout({ children }: LayoutProps) {
+/** The editor's frame: the header with its sections and the way to the blog, the flash, the page. */
+export default function Layout({ blogSlug, children }: LayoutProps) {
   const page = usePage()
   const user = page.props.auth.user
   const currentPath = page.url.split(/[?#]/)[0] || '/'
-  const trimmedName = user?.name?.trim()
-  const displayName =
-    trimmedName && trimmedName.length > 0 ? trimmedName : (user?.email ?? '')
+  const displayName = user?.name?.trim() || 'Guest'
   const { mainRef, announcement } = usePageTransitionFocus()
 
   return (
@@ -73,24 +68,20 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8">
           <Brand />
-          {user ? (
-            <PrimaryNavigation currentPath={currentPath} className="hidden sm:block" />
-          ) : null}
+          {user ? <PrimaryNavigation currentPath={currentPath} className="hidden sm:block" /> : null}
           <div className="ml-auto flex items-center gap-2">
+            {blogSlug !== undefined ? (
+              <a href={href(paths.blog, { blog: blogSlug })} className={buttonClassName({ variant: 'ghost', size: 'sm' })}>
+                View blog
+                <ExternalLink aria-hidden="true" />
+              </a>
+            ) : null}
             {user ? (
-              <AccountMenu displayName={displayName} email={user.email} />
+              <AccountMenu displayName={displayName} email={user.isAnonymous ? 'Guest, deleted after a week' : ''} />
             ) : (
-              <>
-                <Link href={paths.login} className={buttonClassName({ variant: 'ghost', size: 'sm' })}>
-                  Sign in
-                </Link>
-                <Link
-                  href={paths.register}
-                  className={buttonClassName({ size: 'sm', className: 'hidden sm:inline-flex' })}
-                >
-                  Create account
-                </Link>
-              </>
+              <Link href={paths.login} className={buttonClassName({ size: 'sm' })}>
+                Start writing
+              </Link>
             )}
           </div>
         </div>
@@ -106,12 +97,7 @@ export default function Layout({ children }: LayoutProps) {
         {announcement}
       </span>
 
-      <main
-        ref={mainRef}
-        id="main-content"
-        tabIndex={-1}
-        className="flex-1 focus:outline-none"
-      >
+      <main ref={mainRef} id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           {page.flash.success ? (
             <p

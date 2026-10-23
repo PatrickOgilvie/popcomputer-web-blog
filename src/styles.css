@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* The blog's reading face: a book serif each system already has. */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, Cambria, serif;
+}
 
 /*
  * Pages are styled with Tailwind utilities on the default palette. The only
