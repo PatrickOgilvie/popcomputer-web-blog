@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import { href } from '@popcomputer/web/paths'
 import { readPage, testBrowser, testClock, testEnv, type TestBrowser } from '@popcomputer/web/testing'
+import { createAuth } from '../src/auth'
+import { createDb } from '../src/db'
 import { paths } from '../src/paths'
 import worker from '../src/worker'
 import { app, asksToSignIn, editedId, freshBindings, freshEnv, postFields, send, startDemo, visit, writer } from './app'
+import { databases } from './databases'
 
 const editor = async (browser: TestBrowser) => (await readPage(await browser.request(paths.dashboard, visit), 'Posts/Index')).props
 
@@ -45,6 +48,44 @@ describe('the demo', () => {
       blogs: 0,
       posts: 0,
     })
+  })
+})
+
+describe("the app's address", () => {
+  // Better Auth makes its cookies Secure, with the __Secure- prefix, when its
+  // baseURL is https: the cookie shows which address it took.
+  test('is APP_URL to Better Auth, whichever address a request reached', async () => {
+    const env = testEnv({ ...(await freshBindings()), APP_URL: 'https://blog.example.com' })
+
+    const res = await app.request('http://localhost/login', send('POST'), env)
+
+    expect(res.headers.get('Location')).toBe(paths.dashboard)
+    expect(res.headers.getSetCookie().some((cookie) => cookie.startsWith('__Secure-better-auth.session_token='))).toBe(true)
+  })
+
+  // Better Auth checks a request's Origin only once it carries a cookie, and
+  // never under bun test unless told to, so this asks src/auth.ts's own
+  // options with the check on.
+  test('lets Better Auth trust the page’s own address, a Version URL bun run preview shares, and no other', async () => {
+    const version = 'https://1a2b3c4d-popcomputer-web-blog.example.workers.dev'
+    const auth = createAuth({
+      db: createDb(await databases.fresh()),
+      secret: 'test-only-secret-0123456789abcdef0123456789',
+      baseURL: 'https://blog.example.com',
+      advanced: { disableOriginCheck: false },
+      logger: { disabled: true },
+    })
+    const startAt = (origin: string) =>
+      auth.handler(
+        new Request(`${version}/api/auth/sign-in/anonymous`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Cookie: 'theme=dark', Origin: origin },
+          body: '{}',
+        })
+      )
+
+    expect((await startAt(version)).status).toBe(200)
+    expect((await startAt('https://elsewhere.example')).status).toBe(403)
   })
 })
 

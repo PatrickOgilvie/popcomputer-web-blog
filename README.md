@@ -168,9 +168,10 @@ Cloudflare take the same name when you first set it up there.
 
 `bun run dev` does the setup a new app needs. The first time, it writes
 `.dev.vars` with a new secret for signing in, and each time it applies any new
-migrations to the local D1 database. It stops, saying what to add, if
-`.dev.vars` lacks a secret `src/env.ts` says the app needs, as
-[Vars and secrets](#vars-and-secrets) shows. Then it runs Vite, with Cloudflare's
+migrations to the local D1 database and gives the app its own address as
+`APP_URL`, in place of the live one in `wrangler.jsonc`. It stops, saying
+what to add, if `.dev.vars` lacks a secret `src/env.ts` says the app needs,
+as [Vars and secrets](#vars-and-secrets) shows. Then it runs Vite, with Cloudflare's
 Vite plugin running the Worker inside it, so the pages and their scripts share
 one address, and an edit shows in the browser as you save it. Portless gives
 that address the app's name instead of a port. If Node.js is missing, it says
@@ -231,8 +232,8 @@ bun run check
 ```
 
 `check` runs the type check, the framework's lint rules (`oxlint`) and the
-tests. The tests send requests through the app, signing in through the real
-registration form, each against a D1 database of its own in Miniflare, in
+tests. The tests send requests through the app, starting the demo through
+the real sign-in form, each against a D1 database of its own in Miniflare, in
 process. On GitHub, `.github/workflows/check.yml` runs it for each push to
 `main` and each pull request.
 
@@ -301,8 +302,18 @@ with the id in brackets.
 `src/env.ts` declares each var and secret the Worker reads, once, with an
 Effect schema for its value. The Worker checks its own against it before it
 serves: a missing or invalid one fails every request, and its log names which.
-The commands below check them before that can happen. The template has two:
-`BETTER_AUTH_SECRET`, which signs sessions, and `ENVIRONMENT`.
+The commands below check them before that can happen. The blog has three:
+`BETTER_AUTH_SECRET`, which signs sessions; `APP_URL`, the app's address;
+and `ENVIRONMENT`.
+
+`APP_URL`, such as `https://blog.web.popcomputer.com`, is Better Auth's
+`baseURL`, never the address a request arrived at, which whoever sends the
+request chooses. It's an origin, with no path or trailing slash, and each
+place the app runs sets it: `wrangler.jsonc`'s vars the live address,
+`bun run dev` the address it serves the app at (a line in `.dev.vars` sets
+another, such as a tunnel's), and the tests `http://localhost`, in
+`test/app.ts`. The blog emails nothing, so nothing names it yet; an app that
+turns on passwords or magic links emails links that do.
 
 A secret, such as another service's API key, is declared with `secret(...)`.
 A secret nobody has to choose, such as `BETTER_AUTH_SECRET`, has a
@@ -448,14 +459,15 @@ code, not the database: migrations stay applied, so the older code has to work
 with the newer tables. Requests to a Version URL, from `bun run preview` or a
 deploy's check, don't show in `bun run logs`.
 
-Better Auth takes its origin from each request, so the Worker works on
-`workers.dev`, at its Version URLs and on any custom domain routed to it,
-with nothing more to configure.
+Starting the demo works on `workers.dev`, at the Worker's Version URLs and
+on any custom domain routed to it: Better Auth trusts the page's own address
+beside `APP_URL`, as setupWeb's cross-site check does.
 
 This repository's `wrangler.jsonc` routes the Worker to `blog.web.popcomputer.com`, on
-popcomputer.com's Cloudflare zone, and turns on Workers Cache
-(`"cache": { "enabled": true }`), which keeps the public pages. To deploy a
-copy of your own, remove its `routes`, or name a domain on your own account.
+popcomputer.com's Cloudflare zone, names it as `APP_URL`, and turns on
+Workers Cache (`"cache": { "enabled": true }`), which keeps the public pages.
+To deploy a copy of your own, remove its `routes`, or name a domain on your
+own account, and set `APP_URL` in its `vars` to your copy's address.
 
 ## Deploying from GitHub
 

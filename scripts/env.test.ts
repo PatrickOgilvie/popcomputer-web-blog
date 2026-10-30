@@ -47,6 +47,15 @@ describe("the template's declaration", () => {
       generated: [],
     })
   })
+
+  test('needs APP_URL, an origin with no path or trailing slash', () => {
+    const uploaded = new Set(['BETTER_AUTH_SECRET'])
+
+    expect(checkRemote(env, production, uploaded).problems).toEqual(["The variable APP_URL isn't in wrangler.jsonc's vars. Add it there."])
+    expect(checkRemote(env, { ...production, APP_URL: 'https://blog.example.com/' }, uploaded).problems).toEqual([
+      "The variable APP_URL is invalid: Expected an origin, such as https://app.example.com, with no path or trailing slash. Change it in wrangler.jsonc's vars.",
+    ])
+  })
 })
 
 describe('the files', () => {
@@ -108,6 +117,15 @@ describe('local check', () => {
     const devVars = { BETTER_AUTH_SECRET: authSecret, RESEND_API_KEY: 're_123', ENVIRONMENT: 'development' }
 
     expect(checkLocal(mailing, { ENVIRONMENT: 'staging' }, devVars).problems).toEqual([])
+  })
+
+  test("takes the vars bun run dev sets itself, with .dev.vars over them", () => {
+    const devServer = { APP_URL: 'https://book-club.localhost' }
+
+    expect(checkLocal(env, production, { BETTER_AUTH_SECRET: authSecret }, devServer).problems).toEqual([])
+    expect(checkLocal(env, production, { BETTER_AUTH_SECRET: authSecret, APP_URL: 'tunnel.example' }, devServer).problems).toEqual([
+      'The variable APP_URL is invalid: Expected an origin, such as https://app.example.com, with no path or trailing slash. Change it in .dev.vars.',
+    ])
   })
 
   test('says where a missing var goes', () => {

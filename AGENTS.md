@@ -16,7 +16,8 @@ Each is declared once, and everything else derives from it:
   in React too (`FormInput<typeof PostForm>`).
 - `src/pages.ts`: each page's props, taken from the tables' columns.
 - `src/env.ts`: the Worker's vars and secrets, each with its schema; the
-  bindings type derives from it.
+  bindings type derives from it. `APP_URL` is the app's address, Better
+  Auth's `baseURL`, never the request's URL.
 - `src/app.ts`: `setupWeb`, which owns rendering, D1, auth and route binding.
 - `src/routes.ts`: every route, with the action that answers it.
 - `src/actions/`: the actions. `src/pages/`: the React pages, each listed in
@@ -100,6 +101,18 @@ the live one.
 
 `bun run env:check` checks `.dev.vars` and the vars, and
 `bun run env:check --remote` checks the secrets on Cloudflare, by name.
+
+## Signing in
+
+Visitors sign in only as guests, through Better Auth's anonymous plugin
+(`startDemo` in `src/actions/auth.ts`); `src/auth.ts` keeps
+`emailAndPassword` off, and nothing is emailed. Better Auth's `baseURL` is
+`APP_URL`: `wrangler.jsonc` sets the live address, `bun run dev` its own, and
+`test/app.ts` `http://localhost`. Better Auth also trusts the page's own
+address, so the demo starts at a Version URL too. Turning passwords or magic
+links on takes the framework's `docs/auth.md` "Proving an address" (or
+`docs/auth-plugins.md`) first: `requireEmailVerification`, an email sender,
+and an emailed link that opens a page whose button posts its token.
 
 ## Deploying
 

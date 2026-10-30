@@ -16,6 +16,7 @@ export async function freshBindings() {
   return {
     DB: await databases.fresh(),
     BETTER_AUTH_SECRET: 'test-only-secret-0123456789abcdef0123456789',
+    APP_URL: 'http://localhost',
     SIGN_IN_LIMITER: testRateLimiter(),
     ENVIRONMENT: 'test' as const,
   }

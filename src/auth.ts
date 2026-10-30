@@ -8,6 +8,7 @@ import * as schema from './schema'
 export interface CreateAuthOptions {
   readonly db: Database
   readonly secret: string
+  /** The app's own origin: APP_URL, never the request's URL. */
   readonly baseURL: string
   readonly advanced?: BetterAuthOptions['advanced']
   readonly logger?: BetterAuthOptions['logger']
@@ -25,8 +26,15 @@ export function createAuth(options: CreateAuthOptions) {
     database: drizzleAdapter(options.db, { provider: 'sqlite', schema }),
     secret: options.secret,
     baseURL: options.baseURL,
+    // Better Auth trusts forms from baseURL alone. Trusting the page's own
+    // address too, as setupWeb's cross-site check does, lets a visitor start
+    // the demo at a Version URL `bun run preview` shares.
+    trustedOrigins: (request) => (request === undefined ? [] : [new URL(request.url).origin]),
     // A demo: visitors sign in as guests, with no email or password, and
     // nobody registers. The anonymous plugin makes each guest's account.
+    // Turning passwords on takes the framework's docs/auth.md "Proving an
+    // address" first, so a sign-up signs no one in until its emailed link's
+    // page posts the token.
     emailAndPassword: { enabled: false },
     plugins: [anonymous({ generateName: guestName })],
     logger: { log, ...options.logger },

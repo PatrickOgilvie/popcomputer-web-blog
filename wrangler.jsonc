@@ -64,7 +64,10 @@
 			"0 3 * * *"
 		]
 	},
+	// APP_URL is the address the app is served at, Better Auth's baseURL: the
+	// custom domain above. A copy deployed elsewhere sets its own address here.
 	"vars": {
+		"APP_URL": "https://blog.web.popcomputer.com",
 		"ENVIRONMENT": "production"
 	}
 }
