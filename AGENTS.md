@@ -40,9 +40,6 @@ the same tables again (`blog`, `publicPost`) and set the route's `cache`
 option, and each write that changes what they show purges it, with
 `purges: true` and `purgeCache` (`blogPostsTag` in `src/actions/shared.ts`).
 A new public page that shows posts tags itself the same way, with `tagCache`.
-`setupWeb` gets the schema as a plain object (`{ ...schema }`): the module
-namespace's exports are getters under Vite's dev server, and a nested binding
-looks its parent's table up by value.
 
 A route that reads a record names it in its path (`/posts/{post}`)
 and reads it with `bound('post')`. Add its table to `bindings` in

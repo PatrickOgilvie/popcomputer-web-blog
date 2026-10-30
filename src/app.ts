@@ -39,9 +39,7 @@ export const web = setupWeb(new Hono<Env>(), {
       : { title, scripts: [`/${entry.file}`], styles: (entry.css ?? []).map((file) => `/${file}`), head }
   ),
   database: (c) => createDb(c.env.DB),
-  // A plain object, not the module namespace: under Vite's dev server a
-  // namespace's exports are getters, and the bindings look tables up by value.
-  schema: { ...schema },
+  schema,
   // Each record a path names, and who may load it: another member's record
   // is the 404 a missing one is, so no action has to check.
   bindings: {
