@@ -6,10 +6,10 @@ import {
   dbMutation,
   dbQuery,
   flash,
+  form,
   purgeCache,
   redirect,
   render,
-  validateRequest,
 } from '@popcomputer/web/effect'
 import { PostForm } from '../forms'
 import { paths } from '../paths'
@@ -42,11 +42,14 @@ export const newPost = action(
 const savedMessage = (status: 'draft' | 'published', was: 'draft' | 'published' | null) =>
   status === 'draft' ? (was === 'published' ? 'Taken down: it’s a draft again.' : 'Draft saved.') : was === 'published' ? 'Saved.' : 'Published.'
 
-/** Writes a new post into the writer's blog, as a draft or published. */
-export const createPost = action(
+/**
+ * Writes a new post into the writer's blog, as a draft or published. A form
+ * that fails validation goes back to the page it was sent from, with its
+ * errors; `page` names that page for a request whose Referer doesn't.
+ */
+export const createPost = action(form(PostForm, { page: paths.newPost }), (input) =>
   Effect.gen(function* () {
     const { auth, blog } = yield* writersBlog
-    const input = yield* validateRequest(PostForm)
     const now = DateTime.toDateUtc(yield* DateTime.now)
     const id = crypto.randomUUID()
 
@@ -82,10 +85,9 @@ export const editPost = action(
  * the date, so putting it back keeps its place. The route purges the post's
  * cached pages, and this the blog's list.
  */
-export const updatePost = action(
+export const updatePost = action(form(PostForm, { page: paths.editPost }), (input) =>
   Effect.gen(function* () {
     const post = yield* bound('post')
-    const input = yield* validateRequest(PostForm)
     const now = DateTime.toDateUtc(yield* DateTime.now)
 
     yield* dbMutation((db) =>

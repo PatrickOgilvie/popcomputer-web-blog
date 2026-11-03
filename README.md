@@ -21,7 +21,7 @@ each part; this repository shows them working together on a CMS.
 // src/routes.ts: the editor writes, readers read from Cloudflare's cache
 routes
   .provide(RequireAuthLayer)
-  .put(paths.post, updatePost, { form: paths.editPost, purges: true })
+  .put(paths.post, updatePost, { purges: true })
 
 const cache = { maxAge: 300, staleWhileRevalidate: 86_400 } as const
 

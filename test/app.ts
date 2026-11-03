@@ -56,6 +56,18 @@ export async function startDemo(env: Env): Promise<TestBrowser> {
 }
 
 /**
+ * The same writer in a browser that sends no Referer, as one whose privacy
+ * settings withhold it does, so a form it posts names no page it came from.
+ */
+export function withoutReferer(browser: TestBrowser, env: Env): TestBrowser {
+  const other = testBrowser(app, env)
+
+  for (const [name, value] of browser.cookies) other.setCookie(name, value)
+
+  return other
+}
+
+/**
  * A writer with the sample blog, signed in as their session would sign them
  * in, and the env their requests run with, for a test that sends them with
  * `app.request` itself.

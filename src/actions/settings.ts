@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { DateTime, Effect } from 'effect'
-import { action, dbMutation, flash, purgeCache, recordCacheTag, redirect, render, uniqueFieldErrors, validateRequest } from '@popcomputer/web/effect'
+import { action, dbMutation, flash, form, purgeCache, recordCacheTag, redirect, render, uniqueFieldErrors } from '@popcomputer/web/effect'
 import { BlogForm } from '../forms'
 import { paths } from '../paths'
 import { blogs } from '../schema'
@@ -14,10 +14,9 @@ export const showSettings = action(
 )
 
 /** Renames the blog, or moves it: every page of it is purged, since each shows its title. */
-export const updateSettings = action(
+export const updateSettings = action(form(BlogForm, { page: paths.settings }), (input) =>
   Effect.gen(function* () {
     const { blog } = yield* writersBlog
-    const input = yield* validateRequest(BlogForm)
     const now = DateTime.toDateUtc(yield* DateTime.now)
 
     yield* dbMutation((db) => db.update(blogs).set({ ...input, updatedAt: now }).where(eq(blogs.id, blog.id))).pipe(

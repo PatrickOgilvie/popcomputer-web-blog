@@ -5,7 +5,7 @@ import { createAuth } from '../src/auth'
 import { createDb } from '../src/db'
 import { paths } from '../src/paths'
 import worker from '../src/worker'
-import { app, asksToSignIn, editedId, freshBindings, freshEnv, postFields, send, startDemo, visit, writer } from './app'
+import { app, asksToSignIn, editedId, freshBindings, freshEnv, postFields, send, startDemo, visit, withoutReferer, writer } from './app'
 import { databases } from './databases'
 
 const editor = async (browser: TestBrowser) => (await readPage(await browser.request(paths.dashboard, visit), 'Posts/Index')).props
@@ -198,6 +198,32 @@ describe('the editor', () => {
     const odd = await browser.request(paths.posts, send('POST', postFields({ slug: 'Not A Slug!' })))
 
     expect((await readPage(await browser.follow(odd), 'Posts/Editor')).props.errors.slug).toMatch(/lowercase letters/)
+  })
+
+  test('a form sent without a Referer goes back to the page it is on, by its action’s page', async () => {
+    const env = await freshEnv()
+    const ada = await startDemo(env)
+    const post = (await editor(ada)).posts[0]?.id ?? ''
+    const blank = postFields({ title: '  ' })
+
+    const creating = withoutReferer(ada, env)
+    const created = await creating.request(paths.posts, send('POST', blank))
+    const create = await readPage(await creating.follow(created), 'Posts/Editor')
+
+    expect(create.props.errors.title).toBeDefined()
+    expect(create.props.post).toBeNull()
+
+    const editing = withoutReferer(ada, env)
+    const updated = await editing.request(href(paths.post, { post }), send('PUT', blank))
+    const edit = await readPage(await editing.follow(updated), 'Posts/Editor')
+
+    expect(edit.props.errors.title).toBeDefined()
+    expect(edit.props.post?.id).toBe(post)
+
+    const renaming = withoutReferer(ada, env)
+    const renamed = await renaming.request(paths.settings, send('PUT', { title: '  ', description: null, slug: 'adas-notes' }))
+
+    expect((await readPage(await renaming.follow(renamed), 'Settings')).props.errors.title).toBeDefined()
   })
 
   test('deletes a post', async () => {
