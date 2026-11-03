@@ -10,7 +10,7 @@ export const PublicBlog = tableSchema(schema.blogs).mapFields(Struct.pick(['slug
 
 export const PostSummary = tableSchema(schema.posts).mapFields((fields) => ({
   ...Struct.pick(fields, ['id', 'slug', 'title', 'status', 'publishedAt', 'updatedAt']),
-  words: S.Number,
+  words: S.Int,
 }))
 
 export const Post = tableSchema(schema.posts).mapFields(
@@ -21,12 +21,12 @@ export const Post = tableSchema(schema.posts).mapFields(
 export const PublishedSummary = tableSchema(schema.posts).mapFields((fields) => ({
   ...Struct.pick(fields, ['slug', 'title', 'publishedAt']),
   excerpt: S.String,
-  readingMinutes: S.Number,
+  readingMinutes: S.Int,
 }))
 
 export const PublishedPost = tableSchema(schema.posts).mapFields((fields) => ({
   ...Struct.pick(fields, ['slug', 'title', 'excerpt', 'body', 'publishedAt', 'updatedAt']),
-  readingMinutes: S.Number,
+  readingMinutes: S.Int,
 }))
 
 export const pages = {
