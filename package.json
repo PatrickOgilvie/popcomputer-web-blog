@@ -12,6 +12,7 @@
     "dev": "bun scripts/run-dev.ts",
     "stop": "bun scripts/stop-dev.ts",
     "check": "tsc --noEmit && echo 'Types: no errors' && oxlint && echo 'Lint: no problems' && bun test && popweb-fence debt --check",
+    "fuzz": "FUZZ_RUNS=${FUZZ_RUNS:-5000} FUZZ_SEED=${FUZZ_SEED:-random} bun test test/requests.test.ts",
     "mutate": "popweb-mutate",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply DB --remote -c wrangler.jsonc",

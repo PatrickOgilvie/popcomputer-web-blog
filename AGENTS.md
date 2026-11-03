@@ -36,6 +36,11 @@ Each is declared once, and everything else derives from it:
 5. Write the component in `src/pages/`, typed `WebPage<'Name'>`, and add it
    to `components` in `src/main.tsx`; a page without one is a type error.
 6. Test it in `test/` through the app, as the tests there do.
+   `test/requests.test.ts` fuzzes every route with the forms its actions
+   declare; give a new path placeholder its values there, and seed and
+   watch a new table whose rows have an owner. `bun test` runs it for 200
+   cases; `bun run fuzz` runs 5,000 from a new seed, and a failure prints
+   the `FUZZ_SEED` that replays it.
 
 The posts pages are the example to copy: the editor's list, one editor page
 that creates and changes a post (`Posts/Editor`), and the public blog. A
@@ -204,7 +209,8 @@ others yourself, and say what the change widens.
 
 Run `bun run check`: the type check with the Effect language service, the
 framework's lint rules, the tests and the debt check. Fix what they report
-rather than disabling a rule. Then run `bun run mutate`: it plants small
-bugs in the `src/` lines you changed and lists each one no test catches;
-write the test that fails with each, or say why the change it makes is one
-no caller sees.
+rather than disabling a rule. After changing routes, bindings or actions,
+run `bun run fuzz` too. Then run `bun run mutate`: it plants small bugs in
+the `src/` lines you changed and lists each one no test catches; write the
+test that fails with each, or say why the change it makes is one no caller
+sees.

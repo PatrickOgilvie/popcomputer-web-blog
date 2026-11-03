@@ -236,8 +236,11 @@ tests and the debt check. The type check runs the Effect language service,
 which `bun install` patches in, so an Effect that is neither yielded nor
 assigned fails it. The tests send requests through the app, starting the
 demo through the real sign-in form, each against a D1 database of its own in
-Miniflare, in process. `bun run mutate` plants small bugs in the `src/`
-lines a change touches and lists the ones no test catches, as the
+Miniflare, in process. `test/requests.test.ts` sends generated requests to
+every route, as a visitor and as two writers, and checks that none sees
+another's drafts or changes another's posts or blog; `bun run fuzz` sends
+5,000 of them from a new seed. `bun run mutate` plants small bugs in the
+`src/` lines a change touches and lists the ones no test catches, as the
 framework's `docs/mutation.md` explains. On GitHub,
 `.github/workflows/check.yml` runs `check` for each push to `main` and each
 pull request.
