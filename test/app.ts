@@ -1,3 +1,4 @@
+import type { D1Database } from '@cloudflare/workers-types'
 import { expect } from 'bun:test'
 import { Redacted } from 'effect'
 import { signedIn, testBrowser, testEnv, testRateLimiter, type TestBrowser } from '@popcomputer/web/testing'
@@ -11,10 +12,14 @@ import '../src/routes'
 
 export { app }
 
-/** The Worker's bindings, with a new, empty D1 database. */
-export async function freshBindings() {
+/**
+ * The Worker's bindings, with a new, empty D1 database. Given a `database`,
+ * they use that one as it is: a fuzz property's cases share one and empty it
+ * as each starts, since a new database takes several times what a request does.
+ */
+export async function freshBindings(database?: D1Database) {
   return {
-    DB: await databases.fresh(),
+    DB: database ?? (await databases.fresh()),
     BETTER_AUTH_SECRET: 'test-only-secret-0123456789abcdef0123456789',
     APP_URL: 'http://localhost',
     SIGN_IN_LIMITER: testRateLimiter(),

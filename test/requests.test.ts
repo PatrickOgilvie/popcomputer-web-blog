@@ -34,8 +34,9 @@ import { signedIn, testEnv } from '@popcomputer/web/testing'
 import { routes } from '../src/app'
 import { createDb } from '../src/db'
 import { paths } from '../src/paths'
-import { blogs, posts, session, user } from '../src/schema'
+import { account, blogs, posts, rateLimit, session, user, verification } from '../src/schema'
 import { app, freshBindings } from './app'
+import { databases } from './databases'
 
 // Text only each writer's private records hold: an answer that shows it to
 // anyone else leaked it. A draft is its writer's alone until it's published;
@@ -175,14 +176,51 @@ const nextAddress = () => {
   return `10.${(sentFrom >> 16) & 255}.${(sentFrom >> 8) & 255}.${sentFrom & 255}`
 }
 
+// One database for every case, emptied as each starts: a new one takes several
+// times what a request does. Each case still gets bindings of its own, with
+// their sign-in limiter, from freshBindings().
+let shared: Awaited<ReturnType<typeof databases.fresh>> | undefined
+
+/** The rows every case starts from. */
+const seeded = {
+  users: [people.ada.user, people.grace.user],
+  sessions: [people.ada.session, people.grace.session],
+  blogs: [people.ada.blog, people.grace.blog],
+  posts: [...people.ada.posts, ...people.grace.posts],
+}
+
+/** Rows in the order of their ids, as a read ordered by id returns them. */
+const byId = <Row extends { readonly id: string }>(rows: ReadonlyArray<Row>) => [...rows].sort((left, right) => (left.id < right.id ? -1 : 1))
+
+/** The seeded rows as send()'s reads return them: the same columns, in the same order. */
+const seededRows = {
+  users: byId(seeded.users).map(({ id, name, isAnonymous }) => ({ id, name, isAnonymous })),
+  sessions: byId(seeded.sessions).map(({ id, userId, expiresAt }) => ({ id, userId, expiresAt })),
+  blogs: byId(seeded.blogs).map(({ id, userId, slug, title, description }) => ({ id, userId, slug, title, description })),
+  posts: byId(seeded.posts).map(({ id, blogId, userId, slug, title, body, status }) => ({ id, blogId, userId, slug, title, body, status })),
+}
+
 async function send(sent: FuzzRequest<Person>): Promise<Refusal> {
-  const bindings = await freshBindings()
+  shared ??= await databases.fresh()
+  const bindings = await freshBindings(shared)
   const db = createDb(bindings.DB)
 
-  await db.insert(user).values([people.ada.user, people.grace.user])
-  await db.insert(session).values([people.ada.session, people.grace.session])
-  await db.insert(blogs).values([people.ada.blog, people.grace.blog])
-  await db.insert(posts).values([...people.ada.posts, ...people.grace.posts])
+  // Emptied as the case starts, not as it ends, so a case that throws leaves
+  // the next nothing: every table, each before the ones its rows name, then
+  // the rows a case starts from, all in one batch.
+  await db.batch([
+    db.delete(posts),
+    db.delete(blogs),
+    db.delete(session),
+    db.delete(account),
+    db.delete(verification),
+    db.delete(rateLimit),
+    db.delete(user),
+    db.insert(user).values(seeded.users),
+    db.insert(session).values(seeded.sessions),
+    db.insert(blogs).values(seeded.blogs),
+    db.insert(posts).values(seeded.posts),
+  ])
 
   const userRows = () => db.select({ id: user.id, name: user.name, isAnonymous: user.isAnonymous }).from(user).orderBy(user.id)
   const sessionRows = () =>
@@ -195,7 +233,8 @@ async function send(sent: FuzzRequest<Person>): Promise<Refusal> {
       .from(posts)
       .orderBy(posts.id)
 
-  const before = { users: await userRows(), sessions: await sessionRows(), blogs: await blogRows(), posts: await postRows() }
+  // What the batch just wrote, without asking the database again.
+  const before = seededRows
   const env = sent.person === null ? testEnv(bindings) : testEnv(signedIn(signedInAs(sent.person)), bindings)
   const answer = await sendFuzzRequest(app, { ...sent, headers: { ...sent.headers, 'cf-connecting-ip': nextAddress() } }, env)
 
