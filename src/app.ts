@@ -46,6 +46,7 @@ export const web = setupWeb(new Hono<Env>(), {
     // The editor's: the writer's own posts, drafts too.
     post: routeBinding(schema.posts, { ownedBy: 'userId' }),
     // The readers': any blog by its slug, and its published posts under it.
+    // oxlint-disable-next-line popcomputer-web/explain-security-loosening -- every writer's blog is public by design, read by people who never sign in: its pages show a blog's slug, title and description, and only its published posts, which publicPost's publicWhen decides
     blog: routeBinding(schema.blogs, { public: true }),
     publicPost: routeBinding(schema.posts, { publicWhen: { status: 'published' } }),
   },

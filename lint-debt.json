@@ -1,5 +1,15 @@
 {
-  "count": 0,
+  "count": 1,
   "ignore": [],
-  "directives": []
+  "raisedFrom": "8a645c1df10a93d0b8c1efff3eae39f273c21b0b",
+  "directives": [
+    {
+      "file": "src/app.ts",
+      "directive": "oxlint-disable-next-line",
+      "rules": [
+        "popcomputer-web/explain-security-loosening"
+      ],
+      "reason": "every writer's blog is public by design, read by people who never sign in: its pages show a blog's slug, title and description, and only its published posts, which publicPost's publicWhen decides"
+    }
+  ]
 }
